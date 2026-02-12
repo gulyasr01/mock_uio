@@ -15,13 +15,15 @@ public:
             throw std::runtime_error("data idx out of bound - broken device");
         }
         uintptr_t data_addr = MOCK_UIO_REG_DATA + data_idx * sizeof(uint32_t);
-        return driver.read32(data_addr);
+        uint32_t data = driver.read32(data_addr);
+        std::cout << "received " << data << " on " << data_addr << std::endl;
+
+        return data;
     }
 
     void irq_handler() {
         driver.wait_for_irq();
         uint32_t data = get_data();
-        std::cout << "received data: " << data << std::endl;
     }
 
 private:

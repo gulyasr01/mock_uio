@@ -119,12 +119,14 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
 
     while (!cancel.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        std::cout << "running" << std::endl;
         
         int random_idx = dist(gen) % MOCK_UIO_REG_DATA_WLEN; 
 
+        std::cout << "written " << counter << " to " << random_idx << std::endl;
+
         // "hardware" writes
         regs->DATA[random_idx] = counter++;
+        regs->DATA_IDX = random_idx;
         regs->STATUS |= STATUS_IRQ_PENDING;
         regs->IRQ_COUNT += 1;
 
