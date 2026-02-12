@@ -4,6 +4,7 @@
 #include <thread>
 #include <sys/eventfd.h>
 #include "../include/uiodevice.hpp"
+#include "../include/mock_driver.hpp"
 
 int main()
 {
@@ -20,10 +21,18 @@ int main()
         return 1;
     }
 
+    MockDriver driver{dev_path, kMapSize, irq_fd};
+
     std::atomic<bool> cancel = false;
 
     std::jthread mock_device_thread([&]
                                    { mock_uio_dirver(dev_path, cancel, irq_fd); });
+
+    while (1)
+    {
+        driver.irq_handler();
+    }
+    
 
     //mock_device_thread.join();
 
