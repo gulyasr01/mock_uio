@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <random>
 
-static constexpr size_t kMapSize = 4096;
 static constexpr uint32_t kMagic = 0x55494F4D; // 'UIOM'
 static constexpr uint32_t STATUS_IRQ_PENDING = 1u << 0;
 

@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstdint>
 
+constexpr size_t kMapSize = 4096;
+
 constexpr std::uintptr_t MOCK_UIO_REG_MAGIC     = 0x00;
 constexpr std::uintptr_t MOCK_UIO_REG_VERSION   = 0x04;
 constexpr std::uintptr_t MOCK_UIO_REG_CTRL_1    = 0x08;

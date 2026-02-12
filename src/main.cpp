@@ -3,6 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <sys/eventfd.h>
+#include "../include/uiodevice.hpp"
 
 int main()
 {
