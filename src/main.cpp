@@ -1,4 +1,4 @@
-#include "mock_uio.hpp"
+#include "../include/mock_uio.hpp"
 #include <string>
 #include <atomic>
 #include <thread>
@@ -12,16 +12,12 @@ int main()
 
     int uio_fd = create_register_file(dev_path);
 
-    printf("we got the file");
-
     int irq_fd = eventfd(0, EFD_CLOEXEC);
     if (irq_fd < 0)
     {
         perror("eventfd");
         return 1;
     }
-
-    printf("we got the intr");
 
     std::atomic<bool> cancel = false;
 

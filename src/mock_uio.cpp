@@ -1,4 +1,4 @@
-#include "mock_uio.hpp"
+#include "../include/mock_uio.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+#include <random>
 
 static constexpr size_t kMapSize = 4096;
 static constexpr uint32_t kMagic = 0x55494F4D; // 'UIOM'
@@ -27,7 +28,8 @@ struct __attribute__((packed)) Regs
     uint32_t STATUS;    // 0x0C
     uint32_t IRQ_COUNT; // 0x10
     uint32_t IRQ_ACK;   // 0x14 (write-only in real hw; here we just observe writes)
-    uint8_t _pad[MOCK_UIO_REG_DATA - MOCK_UIO_REG_IRQ_ACK - 4]; // todo fix this logic: is it good with uintptr_t?
+    uint32_t DATA_IDX; // 0x18 index of the last falid data
+    uint8_t _pad[MOCK_UIO_REG_DATA - MOCK_UIO_REG_DATA_IDX - 4]; // todo fix this logic: is it good with uintptr_t?
     uint32_t DATA[MOCK_UIO_REG_DATA_WLEN];
     uint8_t _pad_until_end[kMapSize - (MOCK_UIO_REG_DATA + MOCK_UIO_REG_DATA_WLEN *4)];
 };
@@ -85,7 +87,6 @@ int create_register_file(const std::string &path)
 }
 
 int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_fd) {
-    std::cout << "mock called" << std::endl;
     int fd = ::open(path.c_str(), O_RDWR, 0644);
     if (fd < 0)
     {
@@ -100,8 +101,6 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
         return -1;
     }
 
-    std::cout << "mmapping" << std::endl;
-
     // Initialize content via a temporary map
     void *p = mmap(nullptr, kMapSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (p == MAP_FAILED)
@@ -113,14 +112,20 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
 
     auto *regs = reinterpret_cast<Regs *>(p);
 
+    std::random_device rd;
+    std::mt19937 gen(rd()); 
+    std::uniform_int_distribution<> dist(0, MOCK_UIO_REG_DATA_WLEN -1);
+
     uint32_t counter = 0;
 
     while (!cancel.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         std::cout << "running" << std::endl;
+        
+        int random_idx = dist(gen) % MOCK_UIO_REG_DATA_WLEN; 
 
         // "hardware" writes
-        regs->DATA[0] = 0xA0000000u | (counter++ & 0xFFFF);
+        regs->DATA[random_idx] = counter++;
         regs->STATUS |= STATUS_IRQ_PENDING;
         regs->IRQ_COUNT += 1;
 
