@@ -42,7 +42,7 @@ int main()
         if (prev.has_value()) {
             uint32_t prev_val = prev.value();
 
-            if (data =! (prev_val + 1)) {
+            if (data != (prev_val + 1)) {
                 std::cout << "data loss - data is: " << data << " prev is: " << prev_val << std::endl;
                 cancel.store(true, std::memory_order_relaxed);
                 break;

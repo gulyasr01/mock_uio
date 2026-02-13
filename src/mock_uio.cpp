@@ -117,7 +117,7 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
     while (!cancel.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-        if (regs->CTRL & (uint16_t{1} << MOCK_UIO_CRTL_EN_BIT) == 0) {
+        if ((regs->CTRL & (uint16_t{1} << MOCK_UIO_CRTL_EN_BIT)) == 0) {
             continue;
         }
         
