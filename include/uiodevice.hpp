@@ -48,7 +48,8 @@ public:
     uint32_t read32(std::uintptr_t offs)
     {
         bounds_check(offs, sizeof(uint32_t));
-        return *reinterpret_cast<volatile uint32_t *>(base + offs);
+        uint32_t data = *reinterpret_cast<volatile uint32_t *>(base + offs);
+        return data;
     }
 
     void write32(std::uintptr_t offs, uint32_t val)

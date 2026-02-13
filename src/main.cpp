@@ -13,7 +13,7 @@ int main()
 
     printf("hello\n");
 
-    int uio_fd = create_mock_device(dev_path);
+    //int uio_fd = create_mock_device(dev_path);
 
     int irq_fd = eventfd(0, EFD_CLOEXEC);
     if (irq_fd < 0)
@@ -22,20 +22,24 @@ int main()
         return 1;
     }
 
-    MockDriver driver{dev_path, kMapSize, irq_fd};
-
     std::atomic<bool> cancel = false;
 
     std::jthread mock_device_thread([&]
                                    { mock_uio_dirver(dev_path, cancel, irq_fd); });
 
+    // wait for the thread to create the mock device file
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    MockDriver driver{dev_path, kMapSize, irq_fd};
     std::optional<uint32_t> prev = std::nullopt;
 
     driver.star();
+    printf("enabled\n");
 
     while (1)
     {
         driver.wait_on_irq();
+        std::atomic_thread_fence(std::memory_order_acquire);
         uint32_t data = driver.get_data();
         driver.ack_irq(); // todo: put the ack in the data handler
 

@@ -83,7 +83,7 @@ int create_mock_device(const std::string &path)
 }
 
 int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_fd) {
-    int fd = ::open(path.c_str(), O_RDWR, 0644);
+    int fd = create_mock_device(path);
     if (fd < 0)
     {
         perror("open");
@@ -105,7 +105,7 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
         close(fd);
         return -1;
     }
-
+    
     auto *regs = reinterpret_cast<Regs *>(p);
 
     std::random_device rd;
@@ -116,11 +116,11 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
 
     while (!cancel.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
+        
         if ((regs->CTRL & (uint16_t{1} << MOCK_UIO_CRTL_EN_BIT)) == 0) {
             continue;
         }
-        
+
         int random_idx = dist(gen) % MOCK_UIO_REG_DATA_WLEN; 
 
         std::cout << "written " << counter << " to " << random_idx << std::endl;
@@ -133,6 +133,8 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
 
         // "interrupt line" -> userspace wakeup
         uint64_t one = 1;
+        std::atomic_thread_fence(std::memory_order_release);
+
         ssize_t wr = ::write(irq_fd, &one, sizeof(one));
         if (wr != (ssize_t)sizeof(one)) {
             perror("write(eventfd)");
