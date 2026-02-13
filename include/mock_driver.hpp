@@ -16,7 +16,7 @@ public:
         }
         uintptr_t data_addr = MOCK_UIO_REG_DATA + data_idx * sizeof(uint32_t);
         uint32_t data = driver.read32(data_addr);
-        std::cout << "received " << data << " on " << data_addr << std::endl;
+        std::cout << "received " << data << " on " << data_idx << std::endl;
 
         return data;
     }
