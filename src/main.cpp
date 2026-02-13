@@ -3,6 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <sys/eventfd.h>
+#include <optional>
 #include "../include/uiodevice.hpp"
 #include "../include/mock_driver.hpp"
 
@@ -12,7 +13,7 @@ int main()
 
     printf("hello\n");
 
-    int uio_fd = create_register_file(dev_path);
+    int uio_fd = create_mock_device(dev_path);
 
     int irq_fd = eventfd(0, EFD_CLOEXEC);
     if (irq_fd < 0)
@@ -28,16 +29,28 @@ int main()
     std::jthread mock_device_thread([&]
                                    { mock_uio_dirver(dev_path, cancel, irq_fd); });
 
+    std::optional<uint32_t> prev = std::nullopt;
+
     driver.star();
 
     while (1)
     {
         driver.wait_on_irq();
-        driver.get_data();
-        driver.ack_irq();
+        uint32_t data = driver.get_data();
+        driver.ack_irq(); // todo: put the ack in the data handler
+
+        if (prev.has_value()) {
+            uint32_t prev_val = prev.value();
+            if (data =! prev_val + 1) {
+                std::cout << "data loss: " << data << " prev: " << prev_val << std::endl;
+                cancel.store(true, std::memory_order_relaxed);
+                break;
+            }
+        }
+
+        prev.emplace(data);
     }
     
-
     //mock_device_thread.join();
 
     return 0;

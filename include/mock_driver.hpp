@@ -30,10 +30,10 @@ public:
     }
 
     void star() {
-        uint32_t data_ctrl = driver.read32(MOCK_UIO_REG_CTRL_1);
-        uint32_t mask = uint32_t{1} << 8;
+        uint32_t data_ctrl = driver.read32(MOCK_UIO_REG_CTRL);
+        uint32_t mask = uint32_t{1} << MOCK_UIO_CRTL_EN_BIT;
         data_ctrl |= mask;
-        driver.write32(MOCK_UIO_REG_CTRL_1, data_ctrl);
+        driver.write32(MOCK_UIO_REG_CTRL, data_ctrl);
     }
 
 private:
