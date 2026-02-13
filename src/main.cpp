@@ -53,5 +53,8 @@ int main()
     
     //mock_device_thread.join();
 
+    // cleanup the mock device file
+    std::remove(dev_path.c_str());
+
     return 0;
 }
