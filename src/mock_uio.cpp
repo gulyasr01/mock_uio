@@ -19,18 +19,18 @@ static constexpr uint32_t STATUS_IRQ_PENDING = 1u << 0;
 
 struct __attribute__((packed)) Regs
 {
-    uint32_t MAGIC;     // 0x00
-    uint32_t VERSION;   // 0x04
-    uint8_t CTRL_1;   // 0x08
-    uint8_t CTRL_2;   // 0x09
-    uint16_t _pad_ctrl;
-    uint32_t STATUS;    // 0x0C
-    uint32_t IRQ_COUNT; // 0x10
-    uint32_t IRQ_ACK;   // 0x14 (write-only in real hw; here we just observe writes)
-    uint32_t DATA_IDX; // 0x18 index of the last falid data
-    uint8_t _pad[MOCK_UIO_REG_DATA - MOCK_UIO_REG_DATA_IDX - 4]; // todo fix this logic: is it good with uintptr_t?
-    uint32_t DATA[MOCK_UIO_REG_DATA_WLEN];
-    uint8_t _pad_until_end[kMapSize - (MOCK_UIO_REG_DATA + MOCK_UIO_REG_DATA_WLEN *4)];
+    volatile uint32_t MAGIC;     // 0x00
+    volatile uint32_t VERSION;   // 0x04
+    volatile uint8_t CTRL_1;   // 0x08
+    volatile uint8_t CTRL_2;   // 0x09
+    volatile uint16_t _pad_ctrl;
+    volatile uint32_t STATUS;    // 0x0C
+    volatile uint32_t IRQ_COUNT; // 0x10
+    volatile uint32_t IRQ_ACK;   // 0x14 (write-only in real hw; here we just observe writes)
+    volatile uint32_t DATA_IDX; // 0x18 index of the last falid data
+    volatile uint8_t _pad[MOCK_UIO_REG_DATA - MOCK_UIO_REG_DATA_IDX - 4]; // todo fix this logic: is it good with uintptr_t?
+    volatile uint32_t DATA[MOCK_UIO_REG_DATA_WLEN];
+    volatile uint8_t _pad_until_end[kMapSize - (MOCK_UIO_REG_DATA + MOCK_UIO_REG_DATA_WLEN *4)];
 };
 
 static_assert(offsetof(Regs, CTRL_1) == MOCK_UIO_REG_CTRL_1);
@@ -70,8 +70,8 @@ int create_register_file(const std::string &path)
     std::memset(r, 0, sizeof(*r));
     r->MAGIC = kMagic;
     r->VERSION = 1;
-    r->CTRL_1 = 2;
-    r->CTRL_2 = 3;
+    r->CTRL_1 = 0;
+    r->CTRL_2 = 0;
     r->STATUS = 0;
     r->IRQ_COUNT = 0;
     r->IRQ_ACK = 0;
@@ -119,6 +119,10 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
 
     while (!cancel.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        if (regs->CTRL_2 == 0) {
+            continue;
+        }
         
         int random_idx = dist(gen) % MOCK_UIO_REG_DATA_WLEN; 
 
@@ -128,7 +132,7 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
         regs->DATA[random_idx] = counter++;
         regs->DATA_IDX = random_idx;
         regs->STATUS |= STATUS_IRQ_PENDING;
-        regs->IRQ_COUNT += 1;
+        regs->IRQ_COUNT = regs->IRQ_COUNT + 1;
 
         // "interrupt line" -> userspace wakeup
         uint64_t one = 1;
@@ -137,6 +141,13 @@ int mock_uio_dirver(const std::string &path, std::atomic<bool> &cancel, int irq_
             perror("write(eventfd)");
             break;
         }
+
+        while (regs->IRQ_ACK == 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        regs->IRQ_ACK = 0;
+        
     }
 
     return 0;

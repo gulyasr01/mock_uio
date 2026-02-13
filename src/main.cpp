@@ -28,9 +28,13 @@ int main()
     std::jthread mock_device_thread([&]
                                    { mock_uio_dirver(dev_path, cancel, irq_fd); });
 
+    driver.star();
+
     while (1)
     {
-        driver.irq_handler();
+        driver.wait_on_irq();
+        driver.get_data();
+        driver.ack_irq();
     }
     
 

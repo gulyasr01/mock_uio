@@ -21,9 +21,19 @@ public:
         return data;
     }
 
-    void irq_handler() {
+    void wait_on_irq() {
         driver.wait_for_irq();
-        uint32_t data = get_data();
+    }
+
+    void ack_irq() {
+        driver.write32(MOCK_UIO_REG_IRQ_ACK, u_int32_t{1});
+    }
+
+    void star() {
+        uint32_t data_ctrl = driver.read32(MOCK_UIO_REG_CTRL_1);
+        uint32_t mask = uint32_t{1} << 8;
+        data_ctrl |= mask;
+        driver.write32(MOCK_UIO_REG_CTRL_1, data_ctrl);
     }
 
 private:
