@@ -4,6 +4,7 @@
 #include "uiodevice.hpp"
 
 #include <iostream>
+#include <functional>
 
 class MockDriver {
 public:
@@ -21,8 +22,11 @@ public:
         return data;
     }
 
-    void wait_on_irq() {
+    uint32_t wait_on_irq(std::function<uint32_t()> cb) {
         driver.wait_for_irq();
+        auto retval = cb();
+        ack_irq();
+        return retval;
     }
 
     void ack_irq() {

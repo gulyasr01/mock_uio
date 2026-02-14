@@ -38,10 +38,10 @@ int main()
 
     while (1)
     {
-        driver.wait_on_irq();
-        std::atomic_thread_fence(std::memory_order_acquire);
-        uint32_t data = driver.get_data();
-        driver.ack_irq(); // todo: put the ack in the data handler
+        uint32_t data = driver.wait_on_irq([&]() {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return driver.get_data();
+        });
 
         if (prev.has_value()) {
             uint32_t prev_val = prev.value();
