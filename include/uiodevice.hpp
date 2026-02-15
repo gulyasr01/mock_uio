@@ -8,18 +8,57 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-class UioDevice
-{
+class unique_fd {
+private:
+    int fd{-1};
 public:
-    UioDevice(const std::string devnode, size_t devsize, int irqfd) : dev_node(std::move(devnode)), dev_size(devsize), irq_fd(irqfd)
-    {
+    unique_fd() = default;
+
+    explicit unique_fd(const std::string dev_node) {
         fd = open(dev_node.c_str(), O_RDWR, 0644);
         if (fd < 0)
         {
             throw std::runtime_error("File cannot be opened: " + dev_node);
         }
+    }
 
-        void *p = mmap(nullptr, devsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    ~unique_fd() {
+        if (fd >= 0 ) {
+            close(fd);
+        }
+    }
+
+    // copy
+    unique_fd(const unique_fd& other) = delete;
+    
+    unique_fd& operator=(const unique_fd& other) = delete;
+    
+    // move
+    unique_fd& operator=(unique_fd&& other) noexcept {
+        if (this != &other) {
+            if (fd >=0) close(fd);
+            fd = other.fd;
+            other.fd = -1;
+        }
+        return *this;
+    }
+
+    unique_fd(unique_fd && other) noexcept : fd(other.fd) {other.fd = -1;}
+
+    // getter
+    int get() noexcept {return fd;}
+};
+
+class UioDevice
+{
+public:
+    UioDevice(const std::string devnode, size_t devsize, int irqfd) : 
+        dev_node(std::move(devnode)), 
+        dev_size(devsize), 
+        irq_fd(irqfd),
+        fd(unique_fd(dev_node))
+    {
+        void *p = mmap(nullptr, devsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
         if (p == MAP_FAILED)
         {
             throw std::runtime_error("Cannot mmap : " + dev_node);
@@ -38,10 +77,6 @@ public:
         if (base != nullptr)
         {
             munmap(base, dev_size);
-        }
-        if (fd >= 0)
-        {
-            close(fd);
         }
     }
 
@@ -76,9 +111,9 @@ private:
         }
     }
 
-    int fd;
-    int irq_fd;
-    size_t dev_size;
-    std::byte *base = nullptr;
     std::string dev_node;
+    size_t dev_size;
+    int irq_fd;
+    unique_fd fd;
+    std::byte *base = nullptr;
 };

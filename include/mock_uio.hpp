@@ -13,7 +13,7 @@ constexpr std::uintptr_t MOCK_UIO_REG_STATUS    = 0x0C;
 constexpr std::uintptr_t MOCK_UIO_REG_IRQ_COUNT = 0x10;
 constexpr std::uintptr_t MOCK_UIO_REG_IRQ_ACK   = 0x14;
 constexpr std::uintptr_t MOCK_UIO_REG_DATA_IDX  = 0x18;
-constexpr std::uintptr_t MOCK_UIO_REG_DATA      = 0x100; // 256 words
+constexpr std::uintptr_t MOCK_UIO_REG_DATA      = 0x100; // 256 4-byte words
 
 constexpr std::uint8_t MOCK_UIO_CRTL_USELESS_BIT     = 0;
 constexpr std::uint8_t MOCK_UIO_CRTL_EN_BIT     = 8;
