@@ -49,6 +49,44 @@ public:
     int get() noexcept {return fd;}
 };
 
+class unique_mmap {
+private:
+    void * p{MAP_FAILED};
+    size_t len{0};
+
+public:
+    unique_mmap() = default;
+
+    unique_mmap(int fd, size_t size) : len(size) {
+        p = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        
+        if (p == MAP_FAILED)
+        {
+            throw std::runtime_error("Cannot mmap fd : " + std::to_string(fd));
+        }
+    }
+
+    unique_mmap& operator=(const unique_mmap & other) = delete;
+    unique_mmap(const unique_mmap & other) = delete;
+
+    unique_mmap(unique_mmap && other) : p(other.p), len(other.len) {other.p = MAP_FAILED; other.len = 0;}
+
+    unique_mmap& operator=(unique_mmap && other) noexcept {
+        if (this != &other) {
+            if (p != MAP_FAILED) {
+                munmap(p, len);
+                p = other.p;
+                len = other.len;
+                other.p = MAP_FAILED;
+                other.len = 0;
+            }
+        }
+        return *this;
+    }
+
+    std::byte * get() const noexcept{return static_cast<std::byte*>(p);}
+};
+
 class UioDevice
 {
 public:
@@ -56,41 +94,28 @@ public:
         dev_node(std::move(devnode)), 
         dev_size(devsize), 
         irq_fd(irqfd),
-        fd(unique_fd(dev_node))
-    {
-        void *p = mmap(nullptr, devsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd.get(), 0);
-        if (p == MAP_FAILED)
-        {
-            throw std::runtime_error("Cannot mmap : " + dev_node);
-        }
-
-        base = static_cast<std::byte *>(p);
-    }
+        fd(dev_node),
+        base(fd.get(), dev_size)
+    {}
 
     UioDevice(UioDevice &&other) = delete;
     UioDevice(const UioDevice &other) = delete;
     UioDevice &operator=(const UioDevice &other) = delete;
     UioDevice &operator=(UioDevice &&other) = delete;
 
-    ~UioDevice()
-    {
-        if (base != nullptr)
-        {
-            munmap(base, dev_size);
-        }
-    }
+    ~UioDevice() = default;
 
     uint32_t read32(std::uintptr_t offs)
     {
         bounds_check(offs, sizeof(uint32_t));
-        uint32_t data = *reinterpret_cast<volatile uint32_t *>(base + offs);
+        uint32_t data = *reinterpret_cast<volatile uint32_t *>(base.get() + offs);
         return data;
     }
 
     void write32(std::uintptr_t offs, uint32_t val)
     {
         bounds_check(offs, sizeof(uint32_t));
-        *reinterpret_cast<volatile uint32_t *>(base + offs) = val;
+        *reinterpret_cast<volatile uint32_t *>(base.get() + offs) = val;
     }
 
     uint64_t wait_for_irq()
@@ -115,5 +140,5 @@ private:
     size_t dev_size;
     int irq_fd;
     unique_fd fd;
-    std::byte *base = nullptr;
+    unique_mmap base;
 };
