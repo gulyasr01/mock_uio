@@ -36,11 +36,7 @@ public:
     // move
     unique_fd& operator=(unique_fd&& other) noexcept {
         // todo do it with std::swap
-        if (this != &other) {
-            if (fd >=0) close(fd);
-            fd = other.fd;
-            other.fd = -1;
-        }
+        std::swap(*this, other);
         return *this;
     }
 
@@ -67,21 +63,19 @@ public:
         }
     }
 
+    ~unique_mmap() noexcept {
+        if (p != MAP_FAILED) {
+            munmap(p, len);
+        }
+    }
+
     unique_mmap& operator=(const unique_mmap & other) = delete;
     unique_mmap(const unique_mmap & other) = delete;
 
     unique_mmap(unique_mmap && other) : p(other.p), len(other.len) {other.p = MAP_FAILED; other.len = 0;}
 
     unique_mmap& operator=(unique_mmap && other) noexcept {
-        if (this != &other) {
-            if (p != MAP_FAILED) {
-                munmap(p, len);
-                p = other.p;
-                len = other.len;
-                other.p = MAP_FAILED;
-                other.len = 0;
-            }
-        }
+        std::swap(*this, other);
         return *this;
     }
 
