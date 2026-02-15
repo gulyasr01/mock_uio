@@ -29,18 +29,26 @@ int main()
 
     // wait for the thread to create the mock device file
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    
+    std::optional<MockDriver> driver = std::nullopt;
 
-    MockDriver driver{dev_path, kMapSize, irq_fd};
+    try {
+        driver.emplace(dev_path, kMapSize, irq_fd);
+    } catch (const std::runtime_error & err) {
+        std::cout << "error: " << err.what() << std::endl;
+        return -1;
+    }
+    
     std::optional<uint32_t> prev = std::nullopt;
 
-    driver.star();
+    driver->star();
     printf("enabled\n");
 
     while (1)
     {
-        uint32_t data = driver.wait_on_interrupt([&]() {
+        uint32_t data = driver->wait_on_interrupt([&]() {
             std::atomic_thread_fence(std::memory_order_acquire);
-            return driver.get_data();
+            return driver->get_data();
         });
 
         if (prev.has_value()) {
