@@ -38,7 +38,7 @@ int main()
 
     while (1)
     {
-        uint32_t data = driver.wait_on_irq([&]() {
+        uint32_t data = driver.wait_on_interrupt([&]() {
             std::atomic_thread_fence(std::memory_order_acquire);
             return driver.get_data();
         });

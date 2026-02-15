@@ -22,8 +22,8 @@ public:
         return data;
     }
 
-    uint32_t wait_on_irq(std::function<uint32_t()> cb) {
-        driver.wait_for_irq();
+    uint32_t wait_on_interrupt(std::function<uint32_t()> cb) {
+        driver.wait_for_interrupt();
         auto retval = cb();
         ack_irq();
         return retval;

@@ -35,6 +35,7 @@ public:
     
     // move
     unique_fd& operator=(unique_fd&& other) noexcept {
+        // todo do it with std::swap
         if (this != &other) {
             if (fd >=0) close(fd);
             fd = other.fd;
@@ -118,7 +119,7 @@ public:
         *reinterpret_cast<volatile uint32_t *>(base.get() + offs) = val;
     }
 
-    uint64_t wait_for_irq()
+    uint64_t wait_for_interrupt()
     {
         uint64_t cnt;
         ssize_t n = read(irq_fd, &cnt, sizeof(cnt));
